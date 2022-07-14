@@ -5,8 +5,8 @@
 
     "description": "This extension shows contents of linked tasks from Jira in Github",
 
-    "author": "Rob Quist / DukeSoft",
-    "homepage_url": "https://github.com/RobQuistNL/chrome-github-jira",
+    "author": "Rob Quist / DukeSoft / Antoine Lemaire",
+    "homepage_url": "https://github.com/AntoineLemaire/firefox-github-jira",
 
     "options_ui": {
         "page": "src/options.html",
@@ -45,5 +45,10 @@
     "background": {
         "scripts": ["src/background.js"],
         "persistent": false
+    },
+    "applications": {
+        "gecko": {
+            "id": "antoine@bouffe.io"
+        }
     }
 }

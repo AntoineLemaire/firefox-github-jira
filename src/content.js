@@ -1,6 +1,6 @@
 // The last time a refresh of the page was done
 let lastRefresh = (new Date()).getTime();
-let jiraLogo = chrome.extension.getURL("images/jira.png");
+let jiraLogo = browser.runtime.getURL("images/jira.png");
 let jiraUrl = '';
 let acceptanceStartString = 'h3. Acceptance Criteria';
 let acceptanceEndString  = 'h3. Notes';
@@ -211,15 +211,11 @@ function getJiraUrl(route = '') {
 }
 
 async function syncStorage(data) {
-    return new Promise((resolve, reject) => {
-        chrome.storage.sync.get(data, resolve);
-    })
+    return browser.storage.sync.get(data);
 }
 
 async function sendMessage(data) {
-    return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(data, resolve);
-    })
+    return browser.runtime.sendMessage(data);
 }
 
 

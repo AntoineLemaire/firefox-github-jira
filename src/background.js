@@ -22,7 +22,7 @@ async function processRequest(url, sendResponse) {
     }
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     processRequest(getUrlFromRequest(request), sendResponse)
     return true;
 });
