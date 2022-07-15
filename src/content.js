@@ -60,9 +60,10 @@ function commitStreamEl(href, content) {
 }
 
 function titleHTMLContent(title, issueKey) {
-    return title.replace(/([A-Z0-9]+-[0-9]+)/, `
-        <a href="${getJiraUrl(issueKey)}" target="_blank" alt="Ticket in Jira">${issueKey}</a>
-    `);
+    return title.replace(
+        /([A-Z0-9]+-[0-9]+)/,
+        `<a href="${getJiraUrl(issueKey)}" target="_blank" alt="Ticket in Jira">${issueKey}</a>`
+    );
 }
 
 
@@ -70,10 +71,7 @@ async function userHTMLContent(text, user) {
     if (user && typeof user === 'object') {
         const { avatarUrls, displayName } = user
 
-        let avatarImageData = null;
-        await toDataURL(avatarUrls['16x16']).then((dataUrl) => {
-            avatarImageData = dataUrl;
-        });
+        const avatarImageData = await sendMessage({ method: 'imageToData', url: avatarUrls['16x16'] });
 
         let content = `
             <div class="d-inline-block">
@@ -115,9 +113,9 @@ async function statusIconBlock(statusIcon) {
         return ''
     }
 
-    return await toDataURL(statusIcon).then((dataUrl) => {
-        return `<img height="16" class="octicon" width="12" aria-hidden="true" src="${dataUrl}"/>`;
-    });
+    const imageData = await sendMessage({ method: 'imageToData', url: statusIcon });
+
+    return `<img height="16" class="octicon" width="12" aria-hidden="true" src="${imageData}"/>`;
 }
 
 function statusCategoryColors(statusCategory) {
@@ -215,7 +213,7 @@ async function main(items) {
 
     //Check login
     try {
-        const { name } = await sendMessage({ query: 'getSession', jiraUrl });
+        const { name } = await sendMessage({ method: 'request', query: 'getSession', jiraUrl });
 
         // Check page if content changed (for AJAX pages)
         document.addEventListener('DOMNodeInserted', () => {
@@ -315,7 +313,7 @@ async function handlePrPage() {
 
     //Load up data from jira
     try {
-        const result = await sendMessage({ query: 'getTicketInfo', jiraUrl, ticketNumber })
+        const result = await sendMessage({ method: 'request', query: 'getTicketInfo', jiraUrl, ticketNumber })
         if (result.errors) {
             throw new Error(result.errorMessages);
         }
@@ -357,7 +355,7 @@ async function handlePrCreatePage() {
                     fields: { summary, description: orgDescription },
                     errors = false,
                     errorMessages = false
-                } = {} = await sendMessage({ query: 'getTicketInfo', jiraUrl, ticketNumber });
+                } = {} = await sendMessage({ method: 'request', query: 'getTicketInfo', jiraUrl, ticketNumber });
                 if (errors) {
                     throw new Error(errorMessages)
                 }
@@ -389,15 +387,3 @@ async function handlePrCreatePage() {
     }
 }
 
-/////////////////////////////////
-// UTILS
-/////////////////////////////////
-
-const toDataURL = url => fetch(url)
-    .then(response => response.blob())
-    .then(blob => new Promise((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result)
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-    }));
