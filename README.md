@@ -15,8 +15,7 @@ Not yet available
 - Choose manifest.json or any other file in the addon folder
 
 ### Last fetch upstream: 
-2022-07-14
+2023-01-27
 
 ### Known issues:
  - [ ] Remote images from Atlassian are not loaded (Content Security Policy error)
-
