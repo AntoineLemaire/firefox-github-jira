@@ -22,7 +22,33 @@ async function processRequest(url, sendResponse) {
     }
 }
 
+async function processImageToData(url, sendResponse) {
+    try {
+        sendResponse(await toDataURL(url));
+    } catch (e) {
+        console.log(`Failed to fetch & process image url: ${e.message}`);
+    }
+}
+
+async function toDataURL(url) {
+    return fetch(url)
+        .then(response => response.blob())
+        .then(blob => new Promise((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result)
+            reader.onerror = reject
+            reader.readAsDataURL(blob)
+        }));
+}
+
 browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    processRequest(getUrlFromRequest(request), sendResponse)
+    switch (request.method) {
+        case 'imageToData':
+            processImageToData(request.url || null, sendResponse);
+            break;
+        case 'request':
+        default:
+            processRequest(getUrlFromRequest(request), sendResponse)
+    }
     return true;
 });

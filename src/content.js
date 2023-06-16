@@ -60,26 +60,36 @@ function commitStreamEl(href, content) {
 }
 
 function titleHTMLContent(title, issueKey) {
-    return title.replace(/([A-Z0-9]+-[0-9]+)/, `
-        <a href="${getJiraUrl(issueKey)}" target="_blank" alt="Ticket in Jira">${issueKey}</a>
-    `);
+    return title.replace(
+        /([A-Z0-9]+-[0-9]+)/,
+        `<a href="${getJiraUrl(issueKey)}" target="_blank" alt="Ticket in Jira">${issueKey}</a>`
+    );
 }
 
 
-function userHTMLContent(text, user) {
+async function userHTMLContent(text, user) {
     if (user && typeof user === 'object') {
         const { avatarUrls, displayName } = user
-        return `
+
+        const avatarImageData = await sendMessage({ method: 'imageToData', url: avatarUrls['16x16'] });
+
+        let content = `
             <div class="d-inline-block">
                 ${text}
-                <span class="author text-bold">
-                    <a class="no-underline"><img style="float:none;margin-right:0" class="avatar avatar-user" src="${avatarUrls['16x16']}" width="20"/></a>
-                    ${displayName}
+                <span class="author text-bold">`;
+
+        if (null !== avatarImageData) {
+            content += `<a class="no-underline"><img style="float:none;margin-right:0" class="avatar avatar-user" src="${avatarImageData}" width="20"/></a>`;
+        }
+
+        content += `${displayName}
                 </span>
-            </div>
-        `
+            </div>`;
+
+        return Promise.resolve(content);
     }
-    return ''
+
+    return Promise.resolve('');
 }
 
 function buildLoadingElement(issueKey) {
@@ -90,7 +100,7 @@ function buildLoadingElement(issueKey) {
     return el;
 }
 
-function statusIconBlock(statusIcon) {
+async function statusIconBlock(statusIcon) {
     if (!statusIcon) {
         return ''
     }
@@ -103,7 +113,9 @@ function statusIconBlock(statusIcon) {
         return ''
     }
 
-    return `<img height="16" class="octicon" width="12" aria-hidden="true" src="${statusIcon}"/>`
+    const imageData = await sendMessage({ method: 'imageToData', url: statusIcon });
+
+    return `<img height="16" class="octicon" width="12" aria-hidden="true" src="${imageData}"/>`;
 }
 
 function statusCategoryColors(statusCategory) {
@@ -118,7 +130,7 @@ function statusCategoryColors(statusCategory) {
     }
 }
 
-function headerBlock(issueKey,
+async function headerBlock(issueKey,
     {
         assignee,
         reporter,
@@ -126,10 +138,22 @@ function headerBlock(issueKey,
         summary
     } = {}
 ) {
-    const issueUrl = getJiraUrl(issueKey)
-    const statusIconHTML = statusIconBlock(statusIcon)
+    const issueUrl = getJiraUrl(issueKey);
     const { color: statusColor, background: statusBackground } = statusCategoryColors(statusCategory);
-    return `
+
+    const promiseReporter = userHTMLContent('Reported by', reporter);
+    const promiseAssignee = userHTMLContent('and assigned to', assignee);
+
+    let reporterHTMLBloc = '';
+    let assigneeHTMLBloc = '';
+
+    Promise.all([promiseReporter, promiseAssignee]).then(data => {
+        reporterHTMLBloc = data[0];
+        assigneeHTMLBloc = data[1];
+    });
+
+    return await statusIconBlock(statusIcon).then((statusIconHTML) => {
+        return `
         <div class="TableObject gh-header-meta">
             <div class="TableObject-item">
                 <span class="State State--green" style="background-color: rgb(150, 198, 222);">
@@ -150,12 +174,13 @@ function headerBlock(issueKey,
                     </a>
                 </strong>
                 <div class="d-inline-block">
-                    ${userHTMLContent('Reported by', reporter)}
-                    ${userHTMLContent('and assigned to', assignee)}
+                    ${reporterHTMLBloc}
+                    ${assigneeHTMLBloc}
                 </div>
             </div>
         </div>
     `
+    });
 }
 
 /////////////////////////////////
@@ -188,7 +213,7 @@ async function main(items) {
 
     //Check login
     try {
-        const { name } = await sendMessage({ query: 'getSession', jiraUrl });
+        const { name } = await sendMessage({ method: 'request', query: 'getSession', jiraUrl });
 
         // Check page if content changed (for AJAX pages)
         document.addEventListener('DOMNodeInserted', () => {
@@ -288,11 +313,13 @@ async function handlePrPage() {
 
     //Load up data from jira
     try {
-        const result = await sendMessage({ query: 'getTicketInfo', jiraUrl, ticketNumber })
+        const result = await sendMessage({ method: 'request', query: 'getTicketInfo', jiraUrl, ticketNumber })
         if (result.errors) {
             throw new Error(result.errorMessages);
         }
-        loadingElement.innerHTML = headerBlock(ticketNumber, result.fields);
+        headerBlock(ticketNumber, result.fields).then((content) => {
+            loadingElement.innerHTML = content;
+        });
     } catch(e) {
         console.error('Error fetching data', e)
         loadingElement.innerText = e.message;
@@ -328,7 +355,7 @@ async function handlePrCreatePage() {
                     fields: { summary, description: orgDescription },
                     errors = false,
                     errorMessages = false
-                } = {} = await sendMessage({ query: 'getTicketInfo', jiraUrl, ticketNumber });
+                } = {} = await sendMessage({ method: 'request', query: 'getTicketInfo', jiraUrl, ticketNumber });
                 if (errors) {
                     throw new Error(errorMessages)
                 }
@@ -359,3 +386,4 @@ async function handlePrCreatePage() {
         body.value = nextBodyValue;
     }
 }
+
